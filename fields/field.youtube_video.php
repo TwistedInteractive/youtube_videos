@@ -28,7 +28,8 @@
 					`title` varchar(255) default NULL,
 					`description` text,
 					`keywords` text,
-					`thumbnail` tinytext,
+					`thumbnail_small` tinytext,
+					`thumbnail_large` tinytext,
 					`duration` int(11) unsigned NOT NULL,
 					`favorites` int(11) unsigned NOT NULL,
 					`views` int(11) unsigned NOT NULL,
@@ -195,7 +196,8 @@
 				'duration' => $data['duration'],
 				'favorites' => $data['favorites'],
 				'views' => $data['views'],
-				'thumbnail'=> $data['thumbnail']
+				'thumbnail_small'=> $data['thumbnail_small'],
+				'thumbnail_large'=> $data['thumbnail_large']
 			));
 
 			switch($mode)
@@ -373,8 +375,11 @@
 					$data += array(
 						'keywords' => $media->getElementsByTagNameNS($ns['media'], 'keywords')->item(0)->nodeValue,
 						'duration' => $media->getElementsByTagNameNS($ns['yt'], 'duration')->item(0)->getAttribute('seconds'),
-						'thumbnail'=> $media->getElementsByTagNameNS($ns['media'], 'thumbnail')->item(0)->getAttribute('url')
+						'thumbnail_small'=> $media->getElementsByTagNameNS($ns['media'], 'thumbnail')->item(0)->getAttribute('url')
 					);
+					// Get the large thumbnail:
+					$thumbnails = $media->getElementsByTagNameNS($ns['media'], 'thumbnail');
+					$data['thumbnail_large'] = $thumbnails->item($thumbnails->length-1)->getAttribute('url');
 				}
 
 				if(is_object($author)) {
