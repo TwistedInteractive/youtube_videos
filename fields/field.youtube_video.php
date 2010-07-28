@@ -28,6 +28,7 @@
 					`title` varchar(255) default NULL,
 					`description` text,
 					`keywords` text,
+					`thumbnail` tinytext,
 					`duration` int(11) unsigned NOT NULL,
 					`favorites` int(11) unsigned NOT NULL,
 					`views` int(11) unsigned NOT NULL,
@@ -62,6 +63,7 @@
 		}
 
 		public function fetchIncludableElements() {
+			// Adds raw options
 			return array(
 				$this->get('element_name'),
 				$this->get('element_name') . ': embed'
@@ -186,29 +188,37 @@
 			if ((time() - $data['last_updated']) > ($this->_fields['refresh'] * 60) && $this->_fields['refresh'] > 0){
 				$data = self::updateVideoInfo($data['video_id'], $this->_fields['id'], $wrapper->getAttribute('id'));
 			}
-
+			
 			$video = new XMLElement($this->get('element_name'));
 			$video->setAttributeArray(array(
 				'video-id' => $data['video_id'],
 				'duration' => $data['duration'],
 				'favorites' => $data['favorites'],
-				'views' => $data['views']
+				'views' => $data['views'],
+				'thumbnail'=> $data['thumbnail']
 			));
 
-			if($mode != "embed") {
-				$video->appendChild(new XMLElement('title', General::sanitize($data['title'])));
-				$video->appendChild(new XMLElement('description', General::sanitize($data['description'])));
-
-				$author = new XMLElement('author');
-				$author->appendChild(new XMLElement('name', General::sanitize($data['user_name'])));
-				$author->appendChild(new XMLElement('url', $data['user_url']));
-
-				$video->appendChild($author);
-			}
-			else {
-				$video->appendChild(
-					self::createPlayer($data['video_id'])
-				);
+			switch($mode)
+			{
+				default :
+				{
+					$video->appendChild(new XMLElement('title', General::sanitize($data['title'])));
+					$video->appendChild(new XMLElement('description', General::sanitize($data['description'])));
+	
+					$author = new XMLElement('author');
+					$author->appendChild(new XMLElement('name', General::sanitize($data['user_name'])));
+					$author->appendChild(new XMLElement('url', $data['user_url']));
+	
+					$video->appendChild($author);
+					break;
+				}
+				case 'embed' :
+				{
+					$video->appendChild(
+						self::createPlayer($data['video_id'])
+					);
+					break;
+				}
 			}
 
 			$wrapper->appendChild($video);
@@ -325,9 +335,9 @@
 			$gateway->setopt('URL', "http://gdata.youtube.com/feeds/api/videos/{$video_id}");
 			$gateway->setopt('TIMEOUT', 6);
 			$data = $gateway->exec();
-
+			
 			if($data == "Invalid id") return null;
-
+			
 			return DOMDocument::loadXML($data);
 		}
 
@@ -362,7 +372,8 @@
 				if(is_object($media)) {
 					$data += array(
 						'keywords' => $media->getElementsByTagNameNS($ns['media'], 'keywords')->item(0)->nodeValue,
-						'duration' => $media->getElementsByTagNameNS($ns['yt'], 'duration')->item(0)->getAttribute('seconds')
+						'duration' => $media->getElementsByTagNameNS($ns['yt'], 'duration')->item(0)->getAttribute('seconds'),
+						'thumbnail'=> $media->getElementsByTagNameNS($ns['media'], 'thumbnail')->item(0)->getAttribute('url')
 					);
 				}
 
@@ -379,7 +390,7 @@
 						'views' => $statistics->getAttribute('viewCount')
 					);
 				}
-
+				
 				return $data;
 			}
 			else {
